@@ -1,0 +1,68 @@
+version: '3'
+services:
+
+  # Deploy Context-Broker
+  mongo:
+    image: mongo:3.2
+    command: --nojournal
+  
+  orion1:
+    image: fiware/orion
+    links:
+      - mongo
+    ports:
+      - "1024:1024"
+    container_name: "CONTEXT_BROKER1"
+    command: -subCacheIval 10 -port 1024 -dbhost mongo -notificationMode threadpool:100:4 -logLevel ERROR
+  
+  orion2:
+    image: fiware/orion
+    links:
+      - mongo
+    ports:
+      - "1025:1025"
+    container_name: "CONTEXT_BROKER2"
+    command: -subCacheIval 10 -port 1025 -dbhost mongo -notificationMode threadpool:100:4 -logLevel ERROR
+
+  haproxy:
+    image: haproxy
+    links:
+      - orion1
+      - orion2
+    ports:
+      - "1026:1026"
+    volumes:
+      - /home/victor/workspace/silbops-benchmark/haproxy_confg:/usr/local/etc/haproxy:ro
+    container_name: "LOAD_BALANCER"
+
+  # Deploy SilboPS
+#  silbops:
+#    build: .
+#    image: esilbops_node
+#    volumes:
+#     - /var/run/docker.sock:/var/run/docker.sock
+#     - /usr/bin/docker:/bin/docker
+##    links:
+##      - orion1
+#    ports:
+#      # zk server
+#      - "6666:6666"
+#    # Do not change the container name
+#    container_name: "ORCHESTRATOR"
+#
+#  # Deploy context-broker_silbosPS adapter
+#  adapter:
+#    image: silbops-cb-adapter
+#    volumes:
+#     - /var/run/docker.sock:/var/run/docker.sock
+#     - /usr/bin/docker:/bin/docker
+#    ports:
+#      - "1027:1027"
+#    links:
+#      - silbops:silbops
+#    container_name: "ADAPTER"
+#
+#networks:
+#  default:
+#    external:
+#      name: silbops-net
